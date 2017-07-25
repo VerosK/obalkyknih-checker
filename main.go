@@ -15,7 +15,7 @@ var httpAddress = flag.String(
 	"listenAddress", ":8000",
 	"The address to listen on for HTTP requests.")
 var httpCheckInterval = flag.Duration(
-	"checkInterval", 5*time.Second,
+	"checkInterval", 30*time.Second,
 	"Check interval of backend servers.")
 
 type WatchedServer struct {
