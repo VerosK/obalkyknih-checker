@@ -17,26 +17,26 @@ backend tu služby, která zrovna běží.
 
 ## Spustit
 
-   ./obalkyknih 
+    ./obalkyknih 
 
 ## Zjistit  živý server
 
 Microservice vrací JSON řetězec s odkazem na naposledy živý testovací server.
 
-   curl http://localhost:8000
+    curl http://localhost:8000
 
-   "https://cache1.obalkyknih.cz/"
+    "https://cache1.obalkyknih.cz/"
 
 
 ### Parametry spuštění
 
-   ./obalkyknih -checkInterval=90s
-   ./obalkyknih -listenAddress=:8080
+    ./obalkyknih -checkInterval=90s
+    ./obalkyknih -listenAddress=:8080
 
 ### Stav microservice
 
-   curl http://localhost:8000/status
-   curl http://localhost:8000/metrics
+    curl http://localhost:8000/status
+    curl http://localhost:8000/metrics
 
 ## License:
 
