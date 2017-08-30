@@ -24,6 +24,14 @@ Microservice vrací JSON řetězec s odkazem na naposledy živý testovací serv
     "https://cache1.obalkyknih.cz/"
 
 
+## Zjistit živý server z PHP
+
+Program vytváří soubor, který obsahuje aktuálně běžící server. Standardně ho vytváří v `/tmp/obalkyknih.php` 
+Soubor obsahuje šablonu `$OBALKYKNIH_BASEURL="https://cache1.obalkyknih.cz";` a mělo by být možné ho naincludovat do PHP.
+
+Umístění souboru a jeho obsah se dá změnit z příkazové řádky.
+
+
 ### Parametry spuštění
 
     ./obalkyknih -checkInterval=90s
@@ -32,7 +40,10 @@ Microservice vrací JSON řetězec s odkazem na naposledy živý testovací serv
 ### Stav microservice
 
     curl http://localhost:8000/status
-    curl http://localhost:8000/metrics
+
+### Stav souboru
+
+    cat /tmp/obalkyknih.php
 
 ## License:
 

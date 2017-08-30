@@ -23,7 +23,7 @@ var aliveFile = flag.String(
 	"aliveFile", "/tmp/obalkyknih.php",
 	"File to store alive serves")
 var aliveTemplateStr = flag.String(
-	"aliveTemplate", "$OBALKYKNIH_BASEURL=\"{{.Server.BaseUrl}}\";",
+	"aliveTemplate", "<?php\n$OBALKYKNIH_BASEURL=\"{{.Server.BaseUrl}}\";\n",
 	"Template string to write.")
 var aliveTemplate *template.Template
 
@@ -126,7 +126,7 @@ func main() {
 	flag.Parse()
 
 	log.Print("checkInterval: ", *httpCheckInterval)
-	log.Print("outputFile: ", *AliveFile)
+	log.Print("outputFile: ", *aliveFile)
 	log.Print("tail: ", flag.Args())
 
 	if flag.NArg() > 0 {
