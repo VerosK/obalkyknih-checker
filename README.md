@@ -8,10 +8,6 @@ backend tu služby, která zrovna běží.
 
 ## Zkompilovat
 
-    # stáhnout knihovny
-    export GOPATH=/tmp/gopath-$$
-    mkdir $GOPATH
-    go get github.com/prometheus/client_golang/prometheus/promhttp
     # zkompilovat
     go build
 

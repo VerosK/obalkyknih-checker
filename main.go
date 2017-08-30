@@ -8,15 +8,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 var httpAddress = flag.String(
 	"listenAddress", ":8000",
 	"The address to listen on for HTTP requests.")
 var httpCheckInterval = flag.Duration(
-	"checkInterval", 30*time.Second,
+	"checkInterval", 15*time.Second,
 	"Check interval of backend servers.")
+var aliveFile = flag.String(
+	"aliveFile", "/dev/stdout",
+	"File to store alive serves")
+var aliveTemplate = flag.String(
+	"aliveTemplate", "$obalkyknih=\"{{ server }}\";",
+	"Template string to write.")
 
 type WatchedServer struct {
 	BaseUrl  string `json:"baseUrl"`
@@ -28,11 +33,11 @@ var DEFAULT_SERVERS = []WatchedServer{
 	WatchedServer{
 		BaseUrl:  "https://cache1.obalkyknih.cz/",
 		CheckUrl: "https://cache1.obalkyknih.cz/api/runtime/alive",
-		Alive:    true},
+		Alive:    false},
 	WatchedServer{
 		BaseUrl:  "https://cache2.obalkyknih.cz/",
 		CheckUrl: "https://cache2.obalkyknih.cz/api/runtime/alive",
-		Alive:    true},
+		Alive:    false},
 }
 
 var watchedServers []WatchedServer = DEFAULT_SERVERS
@@ -62,25 +67,42 @@ func status(w http.ResponseWriter, r *http.Request) {
 	w.Write(b)
 }
 
-func checkAlive(ticker *time.Ticker) {
-	var n int
+func updateStatusFile() {
+	log.Print("updating output file to ", serverAlive.BaseUrl)
+}
 
-	serverAlive = &watchedServers[0]
-
-	for range ticker.C {
-		checkUrl := watchedServers[n].CheckUrl
-		// log.Print("Checking: ", checkUrl)
+func getWorkingServer() bool {
+	var checkUrl string
+        var server *WatchedServer
+	for n := range watchedServers {
+                server = &watchedServers[n]
+		checkUrl = server.CheckUrl
 		_, err := http.Get(checkUrl)
 		if err == nil {
-			watchedServers[n].Alive = true
-			serverAlive = &watchedServers[n]
+			// no change
+			if serverAlive.BaseUrl == server.BaseUrl {
+				return true
+			}
+			server.Alive = true
+			serverAlive = server
+			updateStatusFile()
+			return true
 		} else {
-			watchedServers[n].Alive = false
+			server.Alive = false
 		}
-		n = (n + 1)
-		if n >= len(watchedServers) {
-			n = 0
-		}
+	}
+	log.Print("all servers are dead")
+	return false
+}
+
+func checkAlive(ticker *time.Ticker) {
+
+	serverAlive = &watchedServers[0]
+	updateStatusFile()
+	getWorkingServer()
+
+	for range ticker.C {
+		getWorkingServer()
 	}
 }
 
@@ -101,7 +123,7 @@ func main() {
 				watchedServers[n].BaseUrl = parts[0]
 				watchedServers[n].CheckUrl = parts[1]
 			}
-			watchedServers[n].Alive = true
+			watchedServers[n].Alive = false
 			log.Print("Added server: ",
 				watchedServers[n].BaseUrl,
 				" with checkUrl: ",
@@ -110,15 +132,14 @@ func main() {
 		}
 	}
 
+
 	ticker := time.NewTicker(*httpCheckInterval)
 	go checkAlive(ticker)
 
 	http.HandleFunc("/", httpRoot)
 	http.HandleFunc("/status", status)
-	http.Handle("/metrics", promhttp.Handler())
 
 	log.Print("Listening on ", *httpAddress)
 
 	log.Fatal(http.ListenAndServe(*httpAddress, nil))
-
 }
