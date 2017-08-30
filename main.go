@@ -1,27 +1,31 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"encoding/json"
 	"flag"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strings"
+	"text/template"
 	"time"
-
 )
 
 var httpAddress = flag.String(
 	"listenAddress", ":8000",
 	"The address to listen on for HTTP requests.")
 var httpCheckInterval = flag.Duration(
-	"checkInterval", 15*time.Second,
+	"checkInterval", 90*time.Second,
 	"Check interval of backend servers.")
 var aliveFile = flag.String(
-	"aliveFile", "/dev/stdout",
+	"aliveFile", "/tmp/obalkyknih.php",
 	"File to store alive serves")
-var aliveTemplate = flag.String(
-	"aliveTemplate", "$obalkyknih=\"{{ server }}\";",
+var aliveTemplateStr = flag.String(
+	"aliveTemplate", "$OBALKYKNIH_BASEURL=\"{{.Server.BaseUrl}}\";",
 	"Template string to write.")
+var aliveTemplate *template.Template
 
 type WatchedServer struct {
 	BaseUrl  string `json:"baseUrl"`
@@ -69,13 +73,25 @@ func status(w http.ResponseWriter, r *http.Request) {
 
 func updateStatusFile() {
 	log.Print("updating output file to ", serverAlive.BaseUrl)
+	var buf bytes.Buffer
+	writer := bufio.NewWriter(&buf)
+	data := struct{ Server WatchedServer }{*serverAlive}
+	err1 := aliveTemplate.Execute(writer, data)
+	if err1 != nil {
+		panic(err1)
+	}
+	writer.Flush()
+	err2 := ioutil.WriteFile(*aliveFile, buf.Bytes(), 0644)
+	if err2 != nil {
+		panic(err2)
+	}
 }
 
 func getWorkingServer() bool {
 	var checkUrl string
-        var server *WatchedServer
+	var server *WatchedServer
 	for n := range watchedServers {
-                server = &watchedServers[n]
+		server = &watchedServers[n]
 		checkUrl = server.CheckUrl
 		_, err := http.Get(checkUrl)
 		if err == nil {
@@ -110,6 +126,7 @@ func main() {
 	flag.Parse()
 
 	log.Print("checkInterval: ", *httpCheckInterval)
+	log.Print("outputFile: ", *AliveFile)
 	log.Print("tail: ", flag.Args())
 
 	if flag.NArg() > 0 {
@@ -132,6 +149,7 @@ func main() {
 		}
 	}
 
+	aliveTemplate, _ = template.New("alive").Parse(*aliveTemplateStr)
 
 	ticker := time.NewTicker(*httpCheckInterval)
 	go checkAlive(ticker)
