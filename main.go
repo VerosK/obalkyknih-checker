@@ -37,11 +37,11 @@ var DEFAULT_SERVERS = []WatchedServer{
 	WatchedServer{
 		BaseUrl:  "https://cache1.obalkyknih.cz/",
 		CheckUrl: "https://cache1.obalkyknih.cz/api/runtime/alive",
-		Alive:    false},
+		Alive:    true},
 	WatchedServer{
 		BaseUrl:  "https://cache2.obalkyknih.cz/",
 		CheckUrl: "https://cache2.obalkyknih.cz/api/runtime/alive",
-		Alive:    false},
+		Alive:    true},
 }
 
 var watchedServers []WatchedServer = DEFAULT_SERVERS
@@ -90,21 +90,27 @@ func updateStatusFile() {
 func getWorkingServer() bool {
 	var checkUrl string
 	var server *WatchedServer
+        var wasAlive bool;
 	for n := range watchedServers {
 		server = &watchedServers[n]
 		checkUrl = server.CheckUrl
 		_, err := http.Get(checkUrl)
+		wasAlive = server.Alive
+                server.Alive = (err == nil)
+                if (wasAlive != server.Alive) {
+                        log.Print("Server ", server.BaseUrl,
+                                        " status is ", server.Alive);
+                }
+
 		if err == nil {
-			// no change
+			serverAlive = server
 			if serverAlive.BaseUrl == server.BaseUrl {
 				return true
 			}
-			server.Alive = true
-			serverAlive = server
 			updateStatusFile()
 			return true
 		} else {
-			server.Alive = false
+                        continue
 		}
 	}
 	log.Print("all servers are dead")
