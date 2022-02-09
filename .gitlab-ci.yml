@@ -1,0 +1,49 @@
+---
+.build_image:
+  stage: build
+  image: ${CACHE_REGISTRY_URL}/mirrors/docker:20.10-git
+  services:
+    - ${CACHE_REGISTRY_URL}/mirrors/docker:20.10-dind
+  variables:
+    TARGET_IMAGE_VERSION_ID: "${CI_COMMIT_SHORT_SHA}"
+  before_script:
+    - apk update
+    - apk add make
+    - mkdir -p $HOME/.docker
+    - cp ${REGISTRY_AUTH_FILE} $HOME/.docker/config.json
+  script:
+    - cd ${CI_PROJECT_DIR}
+    - make image
+    - make push
+
+
+Build main image:
+  extends: [.build_image]
+  variables:
+    TARGET_IMAGE_TAG: "branch-${CI_COMMIT_BRANCH}"
+  rules:
+    - if:  # run build on main
+        ( $CI_PIPELINE_SOURCE == "push" )  &&
+        ( $CI_COMMIT_BRANCH == "main" )
+    - if:  # run build on devel
+        ( $CI_PIPELINE_SOURCE == "push" )  &&
+        ( $CI_COMMIT_BRANCH == "devel" )
+
+Build latest image:
+  extends: [.build_image]
+  variables:
+    TARGET_IMAGE_TAG: "latest"
+  rules:
+    - if:  # run build on main
+        ( $CI_PIPELINE_SOURCE == "push" )  &&
+        ( $CI_COMMIT_BRANCH == "main" )
+
+
+Build tagged image:
+  extends: [.build_image]
+  variables:
+    TARGET_IMAGE_TAG: "tag-${CI_COMMIT_TAG}"
+  rules:
+    - if:  # run build on version tag
+        ( $CI_PIPELINE_SOURCE == "push" )  &&
+        ( $CI_COMMIT_TAG =~ /^v[0-9]+.[0-9]+.[0-9]+/  )
